@@ -1,0 +1,123 @@
+<html>
+    <head>
+        <title>Google Photorealistic 3DTiles example</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.js"></script>
+        <link href="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.css" rel="stylesheet" />
+        <script src="https://unpkg.com/deck.gl@8.9.0/dist.min.js"></script>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            #map {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 100%;
+            }
+
+            #credits {
+                position: absolute;
+                bottom: 0;
+                right: 0;
+                padding: 2px;
+                font-size: 15px;
+                color: white;
+                text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+                z-index: 1;
+            }
+
+            #credits a {
+                color: white;
+                pointer-events: auto;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="map"></div>
+        <div id="credits"></div>
+        <script type="text/javascript">
+            // 【参考】https://developers.google.com/maps/documentation/tile/use-renderer?hl=ja
+            const GOOGLE_API_KEY = 'AIzaSyBunqvH21z9FY2AOSJf8AO5zSdIpMsneMY';
+            const TILESET_URL = `https://tile.googleapis.com/v1/3dtiles/root.json`;
+            const creditsElement = document.getElementById('credits');
+
+            // マップの初期化
+            const map = new maplibregl.Map({
+                container: 'map',
+                style: {
+                    version: 8,
+                    sources: {},
+                    layers: [],
+                },
+                hash: true,
+                zoom: 16,
+                center: [139.7660988, 35.6808658],
+                pitch: 60,
+                bearing: 0,
+                attributionControl: false,
+            });
+
+            // ズーム・回転
+            map.addControl(new maplibregl.NavigationControl());
+
+            // フルスクリーンモードのオンオフ
+            map.addControl(new maplibregl.FullscreenControl());
+
+            // 現在位置表示
+            map.addControl(
+                new maplibregl.GeolocateControl({
+                    positionOptions: {
+                        enableHighAccuracy: false,
+                    },
+                    fitBoundsOptions: { maxZoom: 18 },
+                    trackUserLocation: true,
+                    showUserLocation: true,
+                })
+            );
+
+            // スケール表示
+            map.addControl(
+                new maplibregl.ScaleControl({
+                    maxWidth: 200,
+                    unit: 'metric',
+                })
+            );
+
+            map.on('load', () => {
+                const { MapboxLayer, Tile3DLayer } = deck;
+
+                // MapboxLayerを使ったインターリーブ
+                const tile3dLayer = new MapboxLayer({
+                    id: 'google-3d-tiles',
+                    type: Tile3DLayer,
+                    data: TILESET_URL,
+                    loadOptions: {
+                        fetch: {
+                            headers: {
+                                'X-GOOG-API-KEY': GOOGLE_API_KEY,
+                            },
+                        },
+                    },
+                    onTilesetLoad: (tileset3d) => {
+                        tileset3d.options.onTraversalComplete = (selectedTiles) => {
+                            const credits = new Set();
+                            selectedTiles.forEach((tile) => {
+                                const { copyright } = tile.content.gltf.asset;
+                                copyright.split(';').forEach(credits.add, credits);
+                                creditsElement.innerHTML = [...credits].join('; ');
+                            });
+                            return selectedTiles;
+                        };
+                    },
+                });
+
+                map.addLayer(tile3dLayer);
+            });
+        </script>
+    </body>
+</html>
