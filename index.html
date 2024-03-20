@@ -115,6 +115,12 @@
                             return selectedTiles;
                         };
                     },
+                    onTileLoad: (d) => {
+                        const { content } = d;
+                        if (content.cartographicOrigin) {
+                            content.cartographicOrigin.z -= 40;
+                        }
+                    },
                 });
 
                 map.addLayer(tile3dLayer);
